@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "bbu"
+version = "0.1.0"
+description = "Universo de Bloques Ramificados: implementacion ejecutable y bateria de falsacion de los postulados P1-P12"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Rami Baydoun Nabhan" }]
+keywords = ["fisica-discreta", "everett", "bloques", "falsabilidad", "bitcoin"]
+
+[project.optional-dependencies]
+test = ["pytest>=8"]
+
+[project.scripts]
+bbu-verify = "bbu.__main__:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
