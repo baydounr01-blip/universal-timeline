@@ -23,6 +23,9 @@ virtud).
 | **S5** | El experimento del millon: 3 fallos ingenuos + version refinada | `bbu/bitcoinrules.py` + E5 | `test_experiments.py` | E5 |
 | **S7** | Alguien paga siempre; solo el protocolo simetrico es estable | `bbu/fixedpoint.py` | `test_p11_fixedpoint.py` | E6 |
 | **S8** | Tres predicciones (dos negativas, una positiva) + LIV cerca de Planck | experimentos | `test_experiments.py` | E1, E2, E3, E4c |
+| **M6←** | Mecanismo de P6 hacia el pasado: CTC postseleccionadas (Lloyd et al. 2011) | `bbu/pctc.py`, `bbu/qsim.py` | `test_m6_pctc.py`, `test_qsim.py` | E7a, E7b, E7c |
+| **M6←, S6** | El computo de otra rama llega como resultado inmediato | `bbu/pctc.py` (`search_through_time`) + `bbu/signature.py` | `test_m6_pctc.py::test_p10_*` | E7d |
+| **M6→** | Mecanismo de P6 hacia el futuro: capsula RSW; P2 (cada tic necesita el anterior), P5 (tiempo propio) | `bbu/timelock.py` | `test_timelock.py`, `test_cli.py` | E8 |
 
 ## Resultados no triviales que produjo la implementacion
 
@@ -46,3 +49,13 @@ virtud).
    (>10 % a φ = −0.3c²), exactamente donde la seccion 9 lo declara
    heuristica. `test_tick_density_diverges_from_gr_in_strong_field`
    documenta la frontera.
+
+5. **Con mecanismo, el computo del futuro no sale gratis.** En la rama en la
+   que el bucle P-CTC se cierra, el pasado recibe un nonce valido y el
+   detector P12 dispara. Pero esa rama pesa k/N², y en el conjunto de ramas el
+   canal cuesta N veces mas que la fuerza bruta. La seccion 6 sobrevive solo
+   condicionada a la rama. E7d: RESTRINGIDO.
+
+6. **P6b no se deduce de la no clonacion.** El mismo circuito transporta
+   estados cuanticos con fidelidad 1 sin dejar copia. P6b queda como
+   restriccion de diseno del canal, no como consecuencia (E7a).

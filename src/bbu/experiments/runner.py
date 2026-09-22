@@ -10,6 +10,7 @@ from __future__ import annotations
 from . import e1_no_onchain_signature, e2_no_branch_variable_return
 from . import e3_offchain_signature, e4_emergent_relativity
 from . import e5_million_btc, e6_fixed_point
+from . import e7_pctc_channel, e8_time_capsule
 from .verdict import Outcome, Verdict
 
 # Que resultado declara el articulo para cada afirmacion. RESTRINGIDO es un
@@ -24,6 +25,11 @@ EXPECTED = {
     "E4c": Outcome.CONSTRAINED,
     "E5": Outcome.CORROBORATED,
     "E6": Outcome.CORROBORATED,
+    "E7a": Outcome.CORROBORATED,
+    "E7b": Outcome.CORROBORATED,
+    "E7c": Outcome.CORROBORATED,
+    "E7d": Outcome.CONSTRAINED,
+    "E8": Outcome.CORROBORATED,
 }
 
 
@@ -37,6 +43,11 @@ def run_all() -> dict[str, Verdict]:
         "E4c": e4_emergent_relativity.run_liv(),
         "E5": e5_million_btc.run(),
         "E6": e6_fixed_point.run(),
+        "E7a": e7_pctc_channel.run_message(),
+        "E7b": e7_pctc_channel.run_no_signaling(),
+        "E7c": e7_pctc_channel.run_self_consistency(),
+        "E7d": e7_pctc_channel.run_compute_return(),
+        "E8": e8_time_capsule.run(),
     }
 
 
