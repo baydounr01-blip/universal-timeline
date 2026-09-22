@@ -23,3 +23,14 @@ jobs:
         run: pytest -q
       - name: Bateria de falsacion (E1-E8)
         run: bbu-verify
+
+  cronochat:
+    name: "cronochat (node 22)"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      - run: npm test

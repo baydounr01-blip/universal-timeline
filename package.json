@@ -1,0 +1,16 @@
+{
+  "name": "cronochat",
+  "private": true,
+  "type": "module",
+  "description": "Cronochat: mensajeria multitemporal sobre el Universo de Bloques Ramificados",
+  "scripts": {
+    "test": "node --test test/*.test.mjs",
+    "dev": "node scripts/dev.mjs"
+  },
+  "dependencies": {
+    "@netlify/blobs": "^11.1.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

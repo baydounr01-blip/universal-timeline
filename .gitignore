@@ -9,3 +9,5 @@ dist/
 htmlcov/
 .venv/
 venv/
+node_modules/
+.netlify/
