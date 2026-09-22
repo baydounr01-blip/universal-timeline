@@ -111,11 +111,80 @@ npm run dev        # http://localhost:8888, almacén en memoria
 npm test           # pruebas del protocolo y de la API
 ```
 
-## 5. API
+## 5. Puente de email
+
+El puente conecta Cronochat con el correo de siempre en los dos sentidos.
+
+### Salida: el mensaje llega también a un buzón
+
+En el compositor aparece **«✉ Enviar también por email a…»**. Cada mensaje sale
+por email cuando llega su hora en la línea de origen:
+
+| Sentido | Cuándo sale el email | Qué dice |
+|---|---|---|
+| Presente | Al enviarlo | El mensaje y el enlace a la sala |
+| Futuro | **En el minuto de su hora**: el cartero (`correo-programado`) pasa cada minuto | «Te escribió desde…», con el compromiso SHA-256 y el nonce, para verificar que no se cambió |
+| Pasado | Al enviarlo | En qué rama llegó, con sus pares y su peso de Born. Tu buzón vive en la línea de origen: no hay bandeja de entrada en 1995 |
+
+Si el proveedor falla, el cartero reintenta cada minuto hasta 5 veces; después
+el mensaje queda marcado como «no se pudo enviar». La API pública nunca
+devuelve las direcciones, solo cuántos destinatarios hay y en qué estado está
+el envío.
+
+**Anti-spam.** Solo se envía a los destinatarios de la lista blanca, con un
+máximo de 3 por mensaje. Sin lista, el puente de salida está cerrado y el campo
+no aparece. Así nadie puede usar tu sitio para mandar correo a desconocidos.
+
+### Entrada: escribir a la sala desde tu email
+
+Cada sala tiene una dirección. Lo que va después del `+` es el instante de
+destino (en UTC):
+
+```
+familia@tu-dominio                      → ahora
+familia+2030@tu-dominio                 → 1 ene 2030
+familia+2030-06-01@tu-dominio           → 1 jun 2030
+familia+2030-06-01t10-30-00@tu-dominio  → 1 jun 2030 10:30:00
+familia+1995-06-01@tu-dominio           → al pasado: abre una rama
+```
+
+El cuerpo del email se convierte en el mensaje, sin la cita del correo anterior
+ni la firma. El autor aparece como `Nombre ✉`. Lo que entra por email no
+vuelve a salir por email, así que no se forman bucles de correo.
+
+### Configuración en Netlify
+
+En **Site configuration → Environment variables**:
+
+| Variable | Para qué | Ejemplo |
+|---|---|---|
+| `RESEND_API_KEY` | Enviar (cuenta gratuita en resend.com, con tu dominio verificado) | `re_…` |
+| `CRONOCHAT_REMITENTE` | Remitente de los emails | `Cronochat <chat@tu-dominio>` |
+| `CRONOCHAT_CORREOS_PERMITIDOS` | Lista blanca: direcciones o `@dominios` | `rami@gmail.com, @familia.es` |
+| `CRONOCHAT_CLAVE_ENTRANTE` | Secreto largo que protege la entrada | `openssl rand -hex 24` |
+
+Para la entrada, configura en tu proveedor de correo entrante (Postmark
+Inbound, Resend Inbound, Mailgun Routes, CloudMailin…) un webhook JSON hacia:
+
+```
+https://tu-sitio.netlify.app/api/correo-entrante?clave=<CRONOCHAT_CLAVE_ENTRANTE>
+```
+
+El normalizador acepta los campos de Postmark (`FromFull`, `To`, `TextBody`,
+`StrippedTextReply`), los de Mailgun (`sender`, `recipient`, `stripped-text`) y
+los genéricos (`from`, `to`, `text`, `subject`).
+
+**En local**, `npm run dev` activa un **buzón local**: los emails no salen a
+internet, se imprimen en la consola. La lista blanca es `@ejemplo.org` y la
+clave de entrada es `local`. Si defines `RESEND_API_KEY`, se envían de verdad.
+
+## 6. API
 
 ```
 GET  /api/cronochat?sala=familia[&rama=origen|rama-xxxxxxxx]
-POST /api/cronochat   {"sala":"familia","autor":"Rami","texto":"hola","destino":"1995-06-01T10:00:00Z"}
+POST /api/cronochat   {"sala":"familia","autor":"Rami","texto":"hola","destino":"1995-06-01T10:00:00Z",
+                       "correos":["ana@familia.es"]}
+POST /api/correo-entrante?clave=…   (webhook del proveedor de correo entrante)
 ```
 
 `destino` es opcional (se toma «ahora»); va del año 1 al 9999 con precisión de

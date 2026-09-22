@@ -29,6 +29,9 @@ export const MAX_TEXTO = 2_000;
 export const MAX_AUTOR = 40;
 export const MAX_MENSAJES_SALA = 500;
 export const ORIGEN = "origen";
+export const MAX_CORREOS = 3;
+
+const CORREO_RE = /^[^\s@<>(),;:"]{1,64}@[a-z0-9.-]{1,190}\.[a-z]{2,24}$/i;
 
 const SALA_RE = /^[a-z0-9][a-z0-9-]{0,39}$/;
 
@@ -87,9 +90,38 @@ function nuevoId() {
   return [...bytes].map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
+// Puente de email: el remitente puede pedir que el mensaje salga tambien
+// por correo en su hora. Para que el sitio no sea un repetidor de spam,
+// solo se admiten destinatarios de la lista blanca del operador
+// (CRONOCHAT_CORREOS_PERMITIDOS: direcciones o @dominios separados por
+// comas). Sin lista, el puente de salida esta cerrado.
+export function permitidosDe(texto) {
+  return String(texto ?? "").split(",").map((x) => x.trim().toLowerCase()).filter(Boolean);
+}
+
+export function validarCorreos(valor, permitidos) {
+  const lista = (Array.isArray(valor) ? valor : String(valor ?? "").split(/[,;\s]+/))
+    .map((x) => String(x).trim().toLowerCase())
+    .filter(Boolean);
+  if (!lista.length) return [];
+  if (!permitidos.length) {
+    throw new ErrorCronochat("el puente de email no esta activado en este sitio", 503);
+  }
+  if (lista.length > MAX_CORREOS) throw new ErrorCronochat(`como maximo ${MAX_CORREOS} destinatarios`);
+  const unicos = [...new Set(lista)];
+  for (const c of unicos) {
+    if (!CORREO_RE.test(c)) throw new ErrorCronochat(`direccion de email no valida: ${c}`);
+    const dominio = c.slice(c.indexOf("@"));
+    if (!permitidos.includes(c) && !permitidos.includes(dominio)) {
+      throw new ErrorCronochat(`${c} no esta en la lista de destinatarios autorizados`, 403);
+    }
+  }
+  return unicos;
+}
+
 // Crea el mensaje a partir de lo que manda el cliente. `ahoraMs` es el
 // reloj del servidor: el cliente nunca decide que hora es.
-export async function crearMensaje(entrada, ahoraMs, transporte = "simulado") {
+export async function crearMensaje(entrada, ahoraMs, transporte = "simulado", opciones = {}) {
   const sala = validarSala(entrada?.sala);
   const autor = String(entrada?.autor ?? "").trim();
   const texto = String(entrada?.texto ?? "");
@@ -104,6 +136,7 @@ export async function crearMensaje(entrada, ahoraMs, transporte = "simulado") {
   const anio = new Date(destinoMs).getUTCFullYear();
   if (anio < 1 || anio > 9999) throw new ErrorCronochat("el destino va del año 1 al 9999");
 
+  const correos = validarCorreos(entrada?.correos, opciones.permitidos ?? []);
   const dir = direccion(destinoMs, ahoraMs);
   const id = nuevoId();
   const nonce = nuevoId();
@@ -133,13 +166,21 @@ export async function crearMensaje(entrada, ahoraMs, transporte = "simulado") {
     mensaje.paresEntrelazados = bits;
     mensaje.log10PesoBorn = log10PesoBorn(bits);
   }
+  if (correos.length) {
+    // Al futuro sale a su hora; al presente y al pasado, ya (el buzon vive
+    // en la linea de origen: no hay bandeja de entrada en 1995).
+    mensaje.correo = { para: correos, estado: "pendiente", intentos: 0 };
+  }
   return mensaje;
 }
 
 // Lo que ve un lector en `ahoraMs`. Los mensajes al futuro llegan sellados
 // hasta su hora: se ve el compromiso, no el texto ni el nonce.
 export function vistaDe(mensaje, ahoraMs) {
-  const { nonce, ...publico } = mensaje;
+  // Las direcciones de email nunca salen por la API publica: solo cuantas son
+  // y en que estado esta el envio.
+  const { nonce, correo, ...publico } = mensaje;
+  if (correo) publico.correo = { destinatarios: correo.para.length, estado: correo.estado };
   if (mensaje.direccion === "futuro" && Date.parse(mensaje.destino) > ahoraMs) {
     const { texto, ...sellado } = publico;
     return { ...sellado, sellado: true, faltaMs: Date.parse(mensaje.destino) - ahoraMs };

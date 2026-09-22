@@ -15,7 +15,9 @@ import {
   ramasDe,
   validarSala,
   vistaDe,
+  permitidosDe,
 } from "./_lib/cronologia.mjs";
+import { configuracionCorreo, debeSalir, entregar } from "./_lib/correo.mjs";
 
 const JSON_HEADERS = { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" };
 
@@ -29,7 +31,22 @@ async function mensajesDe(store, sala) {
   return todos.filter(Boolean);
 }
 
-export async function manejar(req, store, ahoraMs = Date.now()) {
+// Guarda un mensaje nuevo y, si lleva email y ya es su hora, lo entrega.
+export async function publicar(store, mensaje, config, ahoraMs, fetchFn = fetch) {
+  const { blobs } = await store.list({ prefix: `${mensaje.sala}/` });
+  if (blobs.length >= MAX_MENSAJES_SALA) {
+    throw new ErrorCronochat("la sala esta llena; abre otra", 409);
+  }
+  let final = mensaje;
+  await store.setJSON(`${mensaje.sala}/${mensaje.id}`, final);
+  if (debeSalir(final, ahoraMs)) {
+    final = await entregar(final, config, ahoraMs, fetchFn);
+    await store.setJSON(`${mensaje.sala}/${mensaje.id}`, final);
+  }
+  return final;
+}
+
+export async function manejar(req, store, ahoraMs = Date.now(), env = process.env, fetchFn = fetch) {
   try {
     const url = new URL(req.url);
     if (req.method === "GET") {
@@ -43,6 +60,7 @@ export async function manejar(req, store, ahoraMs = Date.now()) {
         mensajes: lineaTemporal(mensajes, rama, ahoraMs),
         ramas: ramasDe(mensajes),
         transportes: TRANSPORTES,
+        puenteCorreo: permitidosDe(configuracionCorreo(env).permitidos).length > 0,
       });
     }
     if (req.method === "POST") {
@@ -52,13 +70,11 @@ export async function manejar(req, store, ahoraMs = Date.now()) {
       } catch {
         throw new ErrorCronochat("el cuerpo debe ser JSON");
       }
-      const mensaje = await crearMensaje(entrada, ahoraMs, entrada?.transporte ?? "simulado");
-      const { blobs } = await store.list({ prefix: `${mensaje.sala}/` });
-      if (blobs.length >= MAX_MENSAJES_SALA) {
-        throw new ErrorCronochat("la sala esta llena; abre otra", 409);
-      }
-      await store.setJSON(`${mensaje.sala}/${mensaje.id}`, mensaje);
-      return responder({ mensaje: vistaDe(mensaje, ahoraMs) }, 201);
+      const config = configuracionCorreo(env);
+      const mensaje = await crearMensaje(entrada, ahoraMs, entrada?.transporte ?? "simulado",
+        { permitidos: permitidosDe(config.permitidos) });
+      const final = await publicar(store, mensaje, config, ahoraMs, fetchFn);
+      return responder({ mensaje: vistaDe(final, ahoraMs) }, 201);
     }
     return responder({ error: "metodo no permitido" }, 405);
   } catch (err) {
@@ -68,9 +84,11 @@ export async function manejar(req, store, ahoraMs = Date.now()) {
   }
 }
 
-export default async (req) => {
+export async function almacen() {
   const { getStore } = await import("@netlify/blobs");
-  return manejar(req, getStore({ name: "cronochat", consistency: "strong" }));
-};
+  return getStore({ name: "cronochat", consistency: "strong" });
+}
+
+export default async (req) => manejar(req, await almacen());
 
 export const config = { path: "/api/cronochat" };
