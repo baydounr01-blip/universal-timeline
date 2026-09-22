@@ -13,9 +13,37 @@ push; un solo `REFUTADO` inesperado tumba el pipeline.
 
 ```
 pip install -e ".[test]"
-pytest            # coherencia interna: 63 tests, un modulo por postulado
-bbu-verify        # bateria de falsacion E1-E6 con evidencia numerica
+pytest            # coherencia interna: 105 tests, un modulo por postulado
+bbu-verify        # bateria de falsacion E1-E8 con evidencia numerica
 ```
+
+## El canal temporal (desde 0.2.0)
+
+El artículo dejaba el canal P6 como «un postulado sin mecanismo». Ahora tiene
+uno en cada dirección, tomado de teorías que nadie ha refutado. Los detalles
+están en [`docs/CANAL_TEMPORAL.md`](docs/CANAL_TEMPORAL.md).
+
+* **Hacia el pasado: CTC postseleccionadas** (Lloyd et al. 2011, probado con
+  fotones en *PRL* 106:040403). En la rama en la que el bucle se cierra, el
+  pasado lee exactamente lo que el futuro envió. Sin conocer el futuro solo ve
+  ruido, así que no puede cambiar nada. La paradoja del abuelo tiene medida
+  exactamente 0. El circuito se exporta a OpenQASM para correrlo en un
+  procesador cuántico real:
+  ```
+  python -m bbu qasm mensaje 101
+  python -m bbu qasm abuelo
+  ```
+* **Hacia el futuro: cápsulas temporales** (Rivest, Shamir y Wagner 1996). Un
+  mensaje que nadie, tampoco quien lo escribió, puede leer antes de completar
+  T tics de cómputo secuencial. Esto funciona hoy:
+  ```
+  python -m bbu capsula sellar "para mi yo de dentro de una hora" --segundos 3600
+  python -m bbu capsula abrir capsula.json
+  ```
+
+Lo que no se puede, y la batería lo comprueba: usar el canal hacia atrás para
+cambiar el pasado u obtener cómputo gratis. En el conjunto de todas las ramas,
+el resultado que «llega del futuro» cuesta N veces más que calcularlo (E7d).
 
 ## Qué puede y qué no puede demostrar este repositorio
 
@@ -33,9 +61,10 @@ Dicho sin rodeos, porque de esto depende leer bien los resultados:
 * **No puede** demostrar que el universo *sea* un árbol de bloques, ni que
   el canal interbloque *exista*. El canal es un postulado sin mecanismo
   (sección 9 del artículo). Lo que el repo aporta ahí es el **detector**
-  (P12): el procedimiento operativo que haría la afirmación contrastable si
-  alguien la usara — y cuya ausencia sostenida de señal es evidencia en
-  contra.
+  (P12), el procedimiento operativo que haría la afirmación contrastable si
+  alguien usara el canal y cuya ausencia sostenida de señal cuenta como
+  evidencia en contra. Desde 0.2.0 aporta también un **mecanismo candidato no
+  refutado** (P-CTC, E7) y comprueba qué parte del artículo sobrevive con él.
 
 Corroborar coherencia no es corroborar verdad física. El pipeline verde
 significa «el artículo sobrevive a su propia batería»; no significa «el
@@ -53,6 +82,11 @@ artículo es verdad».
 | E4c | Desviaciones de Lorentz cerca de Planck (P5, S8) | **RESTRINGIDO** — la variante lineal está *excluida* por GRB 090510 (E_QG,1 > 9.3·E_Planck); sobrevive solo la supresión cuadrática |
 | E5 | El millón de bitcoin: 3 fallos ingenuos + versión refinada coherente (P2, P6–P10) | **CORROBORADO** — incluye reglas de consenso reales: recompensa 3.125 BTC/bloque, ~440 000 bloques (~8.4 años) para juntar 1M reescribiendo historia, puntos de control que lo rechazan, y la propagación de Merkle de P8 con SHA-256d |
 | E6 | Solo el protocolo simétrico produce retorno; alguien paga siempre (P11, S7) | **CORROBORADO** — la historia del protocolo «delega» es la vacía; con el simétrico, las 1000 ramas pagan 10⁶ BTC cada una |
+| E7a | El canal P6 tiene mecanismo: en la rama que cierra, t0 lee lo que t1 envió (P6, P3) | **CORROBORADO**: fidelidad 1 en los 2³ mensajes y en estados cuánticos; la rama pesa 4⁻ⁿ; no queda copia en t1 |
+| E7b | No señalización: sin conocer el futuro, el pasado ve lo mismo (P6c, S2) | **CORROBORADO**: la densidad del receptor es I/2ⁿ para todo mensaje (diferencia ~10⁻¹⁷); cada rama es una libreta de un solo uso con la clave en t1 |
+| E7c | Autoconsistencia: solo existen historias no contradictorias (P6c, S2) | **CORROBORADO**: la paradoja del abuelo tiene medida 0,0; el bootstrap entrega n bits de pura entropía; la medida de cierre es k/N² |
+| E7d | Años de cómputo de otra rama llegan como resultado inmediato (S6, P10–P12) | **RESTRINGIDO**: llegan en la rama que cierra (P12 dispara, 64×), pero esa rama pesa k/N², y en el conjunto de ramas cuesta **256 veces** más que la fuerza bruta |
+| E8 | Hacia el futuro el canal funciona hoy: se lee tras T tics, ni uno menos (P2, P5) | **CORROBORADO**: con T cuadrados abre; con T−1, T/2 o 0 no; al emisor le basta una cota de 1 054 multiplicaciones, frente a los 20 000 cuadrados del receptor |
 
 `RESTRINGIDO` es un veredicto legítimo y es información nueva: la afirmación
 sobrevive solo en forma acotada. `REFUTADO` nunca lo es: significaría que el
@@ -72,10 +106,14 @@ src/bbu/
 ├── returns.py       P10    invariantes de rama vs variables de rama
 ├── fixedpoint.py    P11    punto fijo de Deutsch; protocolos simetrico/asimetrico
 ├── signature.py     P12    detector del exceso de computo (la firma observable)
-└── experiments/     E1-E6  la bateria de falsacion (python -m bbu verify)
+├── qsim.py          --     simulador cuantico exacto (sin dependencias) + OpenQASM
+├── pctc.py          P6     mecanismo hacia el pasado: CTC postseleccionadas
+├── timelock.py      P6     mecanismo hacia el futuro: capsulas RSW
+└── experiments/     E1-E8  la bateria de falsacion (python -m bbu verify)
 tests/               un modulo de tests por postulado + bateria completa
 docs/
 ├── ARTICULO.md      el articulo integro
+├── CANAL_TEMPORAL.md   el mecanismo del canal P6 y lo que la bateria concluye
 └── MAPA_POSTULADOS.md  cada afirmacion → su modulo, sus tests, su experimento
 ```
 
@@ -94,7 +132,13 @@ El repositorio está construido para perder, si tiene que perder:
    existe, la «única predicción falsable» (P12) no distingue nada.
 4. **Rompe el punto fijo.** Define en E6 un protocolo con retorno positivo
    donde ninguna rama pague. Si existe, P11 y la sección 7 caen.
-5. **Contra el mundo real:** si la invariancia de Lorentz resulta exacta a
+5. **Señaliza al pasado.** Encuentra en E7b un mensaje para el que la
+   matriz densidad del receptor en t0 dependa de lo enviado en t1. Si existe,
+   el mecanismo viola la no señalización y el canal deja de ser coherente.
+6. **Abre la cápsula antes de tiempo.** Recupera el mensaje de E8 con menos
+   de T cuadrados secuenciales sin factorizar el módulo. Si lo consigues,
+   refutas la conjetura RSW, y con ella el canal hacia el futuro.
+7. **Contra el mundo real:** si la invariancia de Lorentz resulta exacta a
    todas las escalas, P5 debe reformularse (E4c ya excluye su variante
    lineal); y si aparece evidencia en cadena de «monedas gastadas en otra
    realidad», la teoría entera queda refutada por su propia predicción
@@ -106,6 +150,10 @@ Las del artículo (ver `docs/ARTICULO.md`), y para los números usados por los
 tests: Ashby (2003) *Living Rev. Relativity* 6:1 para el GPS; Vasileiou et
 al. (2013) *Phys. Rev. D* 87:122001 para las cotas LIV de GRB 090510;
 Nakamoto (2008) y el calendario de emisión de Bitcoin para la sección 5.
+Para el canal temporal: Lloyd et al. (2011) *Phys. Rev. D* 84:025007 y *Phys.
+Rev. Lett.* 106:040403; Aaronson (2005) *Proc. R. Soc. A* 461:3473; Rivest,
+Shamir y Wagner (1996) MIT/LCS/TR-684 (lista completa en
+`docs/CANAL_TEMPORAL.md`).
 
 ## Licencia
 

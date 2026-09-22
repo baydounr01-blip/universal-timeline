@@ -21,5 +21,5 @@ jobs:
         run: pip install -e ".[test]"
       - name: Coherencia interna (P1-P12)
         run: pytest -q
-      - name: Bateria de falsacion (E1-E6)
+      - name: Bateria de falsacion (E1-E8)
         run: bbu-verify
