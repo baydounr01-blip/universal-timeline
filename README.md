@@ -45,6 +45,26 @@ Lo que no se puede, y la batería lo comprueba: usar el canal hacia atrás para
 cambiar el pasado u obtener cómputo gratis. En el conjunto de todas las ramas,
 el resultado que «llega del futuro» cuesta N veces más que calcularlo (E7d).
 
+## Cronochat: mensajería entre años, minutos y segundos
+
+Una aplicación al estilo de WhatsApp construida sobre el canal temporal, lista
+para Netlify (`netlify.toml`, `web/`, `netlify/functions/`). Cada mensaje lleva
+un instante de destino:
+
+* **Futuro:** llega sellado. Hasta su hora solo se ve la cuenta atrás y el
+  compromiso SHA-256 que prueba que ya estaba escrito. Funciona de verdad.
+* **Pasado:** abre una rama en la que el mensaje llegó (regla del fork, P6c),
+  con su coste en pares entrelazados y su peso de Born. El transporte es el
+  P-CTC simulado, y la capa física queda preparada para cuando exista.
+
+```
+npm install && npm run dev     # http://localhost:8888
+npm test
+```
+
+El protocolo, la hipótesis y el despliegue están en
+[`docs/CRONOCHAT.md`](docs/CRONOCHAT.md).
+
 ## Qué puede y qué no puede demostrar este repositorio
 
 Dicho sin rodeos, porque de esto depende leer bien los resultados:
