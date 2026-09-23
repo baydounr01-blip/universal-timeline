@@ -164,9 +164,14 @@ compositor.
 | # | Campo | Escribir en "Key" | Escribir en "Value" | Ejemplo exacto | Dónde obtenerlo |
 |---|---|---|---|---|---|
 | **1** | Primera variable | `RESEND_API_KEY` | Tu clave de API de Resend (copia exacta, sin espacios) | `re_1a2b3c4d5e6f7g8h9i0j1k2l3m4n5o6p` | [resend.com](https://resend.com) → **API Keys** → **Create API Key** |
-| **2** | Segunda variable | `CRONOCHAT_REMITENTE` | Nombre + espacio + `<email@tu-dominio>` | `Cronochat <chat@familia.com>` | Tu dominio **verificado** en Resend. El email debe ser de tu dominio. |
+| **2** | Segunda variable | `CRONOCHAT_REMITENTE` | Nombre + espacio + `<email@tu-dominio>` | `Cronochat <chat@tu-dominio.com>` | Tu dominio **verificado** en Resend. El email debe ser de tu dominio. |
 | **3** | Tercera variable | `CRONOCHAT_CORREOS_PERMITIDOS` | Direcciones o dominios separados por comas, **sin espacios** | `ana@ejemplo.com,luis@ejemplo.com,@familia.com` | Define tú mismo. Puedes listar emails específicos o dominios enteros (con `@` delante) |
-| **4** | Cuarta variable | `CRONOCHAT_CLAVE_ENTRANTE` | Secreto aleatorio largo de 32+ caracteres | `sk_test_9a8b7c6d5e4f3g2h1i0j9k8l7m6n5o4` | Genera uno con: `openssl rand -hex 24` (en terminal) |
+| **4** | Cuarta variable | `CRONOCHAT_CLAVE_ENTRANTE` | Secreto aleatorio largo de 32+ caracteres | `4f8c1d0a7b6e5932c4a1f8d7e0b3a695d2c81f74e6a09b53` (ejemplo, **no** lo reutilices) | Genera uno con: `openssl rand -hex 24` (en terminal) |
+
+> **Importante:** la columna «Ejemplo exacto» contiene solo ejemplos ilustrativos.
+> Los valores reales viven únicamente en las variables de entorno de Netlify y no
+> deben escribirse nunca en este repositorio: el escaneo de secretos de Netlify
+> detecta cualquier valor real presente en los archivos y detiene el despliegue.
 
 #### Procedimiento exacto en Netlify
 
@@ -193,7 +198,7 @@ compositor.
 5. **Cuarta variable: CRONOCHAT_CLAVE_ENTRANTE**
    - Clic en "Add a variable"
    - **Key:** `CRONOCHAT_CLAVE_ENTRANTE` (copiar exacto)
-   - **Value:** `sk_test_...` (secreto aleatorio de 32+ caracteres)
+   - **Value:** el secreto que generaste tú mismo (48 caracteres hex)
    - Clic en "Save"
 
 6. **Despliegue:**
