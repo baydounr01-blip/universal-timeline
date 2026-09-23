@@ -113,6 +113,11 @@ function burbuja(m) {
   else if (m.llegada) partes.push(`⟲ llegó desde ${formatoFecha(m.enviadoEn)} · ${m.paresEntrelazados} pares · Born ${pesoBorn(m.log10PesoBorn)}`);
   else if (m.direccion === "futuro") partes.push(`⇢ escrito ${formatoFecha(m.enviadoEn)}`);
   if (m.heredado) partes.push("heredado del origen");
+  if (m.correo) {
+    const estados = { enviado: "enviado", error: "no se pudo enviar",
+      pendiente: m.sellado ? "saldrá a su hora" : "en cola" };
+    partes.push(`✉ ${m.correo.destinatarios} · ${estados[m.correo.estado] ?? m.correo.estado}`);
+  }
   partes.push(formatoFecha(m.momento));
   meta.textContent = partes.join(" · ");
   li.append(meta);
@@ -148,6 +153,7 @@ function pintar() {
   }
   if (abajo) lista.scrollTop = lista.scrollHeight;
 
+  $("puente").hidden = !d.puenteCorreo;
   $("titulo").textContent = `# ${d.sala}`;
   $("subtitulo").textContent = d.rama === "origen"
     ? "Línea de origen: tu historia"
@@ -195,7 +201,8 @@ async function cargar() {
     estado.desfaseMs = Date.parse(datos.ahora) - Date.now();
     // Solo se repinta si algo cambio: asi no se pierde lo que el usuario
     // esta mirando (una verificacion, la posicion del scroll).
-    const huella = JSON.stringify([datos.sala, datos.rama, datos.mensajes.map((m) => [m.id, m.sellado]), datos.ramas]);
+    const huella = JSON.stringify([datos.sala, datos.rama, datos.puenteCorreo, datos.ramas,
+      datos.mensajes.map((m) => [m.id, m.sellado, m.correo?.estado])]);
     estado.datos = datos;
     if (huella !== estado.huella) {
       estado.huella = huella;
@@ -211,6 +218,7 @@ async function enviar(ev) {
   const destino = destinoElegido();
   if (destino === undefined) { actualizarResumen(); return; }
   const cuerpo = { sala: estado.sala, autor: $("autor").value.trim(), texto: $("texto").value, destino };
+  if (!$("puente").hidden && $("correos").value.trim()) cuerpo.correos = $("correos").value;
   const res = await fetch(API, {
     method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(cuerpo),
   });

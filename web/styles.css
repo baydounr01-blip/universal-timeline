@@ -142,6 +142,7 @@ button { cursor: pointer; border: 0; border-radius: 8px; padding: 8px 12px; back
 .modos label { display: inline-flex; align-items: center; gap: 4px; cursor: pointer; }
 .relativo, .absoluto { display: flex; gap: 6px; flex-wrap: wrap; }
 .relativo input { width: 90px; }
+.puente { display: grid; gap: 4px; font-size: 13px; color: var(--suave); }
 .linea-envio { display: flex; gap: 8px; align-items: flex-end; }
 .linea-envio textarea { flex: 1; resize: none; max-height: 140px; border-radius: 20px; padding: 10px 14px; }
 .linea-envio button { border-radius: 50%; width: 44px; height: 44px; padding: 0; font-size: 18px; }

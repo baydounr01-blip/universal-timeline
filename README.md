@@ -57,8 +57,12 @@ un instante de destino:
   con su coste en pares entrelazados y su peso de Born. El transporte es el
   P-CTC simulado, y la capa física queda preparada para cuando exista.
 
+* **Puente de email:** cualquier mensaje puede salir también por correo a su
+  hora, y se puede escribir a la sala desde el email
+  (`familia+2030@tu-dominio` sella el mensaje hasta 2030).
+
 ```
-npm install && npm run dev     # http://localhost:8888
+npm install && npm run dev     # http://localhost:8888 (emails en la consola)
 npm test
 ```
 
