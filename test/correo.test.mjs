@@ -96,7 +96,7 @@ test("si el proveedor falla se reintenta y tras MAX_INTENTOS queda en error", as
   const { fetchFn } = proveedor(500);
   await post(store, { sala: "fam", autor: "R", texto: "x", correos: "rami@correo.es" }, { fetchFn });
   for (let i = 1; i < MAX_INTENTOS; i++) await repartir(store, cfg(), T0 + i * 60_000, fetchFn);
-  const [m] = [...store.datos.values()];
+  const [, m] = [...store.datos].find(([k]) => !k.startsWith("_"));
   assert.equal(m.correo.estado, "error");
   assert.equal(m.correo.intentos, MAX_INTENTOS);
   assert.match(m.correo.error, /proveedor 500/);

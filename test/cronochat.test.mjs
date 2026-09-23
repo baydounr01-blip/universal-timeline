@@ -88,9 +88,19 @@ test("una rama hereda el origen anterior a la bifurcacion", async () => {
 });
 
 test("el transporte fisico no existe: se rechaza, no se finge", async () => {
+  const ancla = { id: "ancla-1", creadaEn: "1999-01-01T00:00:00Z", codigos: [] };
   await assert.rejects(
-    crearMensaje({ sala: "s", autor: "a", texto: "x", destino: "2000-01-01T00:00:00Z" }, T0, "fisico"),
+    crearMensaje({ sala: "s", autor: "a", texto: "x", destino: "2000-01-01T00:00:00Z" }, T0, "fisico",
+      { anclas: [ancla] }),
     (e) => e instanceof ErrorCronochat && e.status === 503);
+});
+
+test("sin receptor anclado, el canal fisico no llega a ese instante", async () => {
+  const ancla = { id: "ancla-1", creadaEn: "2001-01-01T00:00:00Z", codigos: [] };
+  await assert.rejects(
+    crearMensaje({ sala: "s", autor: "a", texto: "x", destino: "2000-01-01T00:00:00Z" }, T0, "fisico",
+      { anclas: [ancla] }),
+    (e) => e instanceof ErrorCronochat && e.status === 409);
 });
 
 test("validacion de entrada", async () => {

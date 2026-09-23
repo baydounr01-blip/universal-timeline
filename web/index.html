@@ -26,6 +26,23 @@
         <p class="ayuda">Un mensaje al pasado no reescribe tu historia: abre una rama en la que llegó (regla del fork, P6c).</p>
         <ul id="ramas"></ul>
       </section>
+      <section class="puente-panel">
+        <h2>Puente</h2>
+        <p class="ayuda">Un mensaje no puede llegar a antes de que exista su receptor. Ancla la sala hoy y, desde este instante, puede recibir del futuro.</p>
+        <ul id="anclas" class="anclas"></ul>
+        <details>
+          <summary>Anclar esta sala ahora</summary>
+          <form id="anclar" class="anclar">
+            <label>Diccionario (opcional, uno por línea)
+              <textarea id="codigos" rows="4" placeholder="sí&#10;no&#10;todo bien&#10;peligro"></textarea>
+            </label>
+            <p class="ayuda">Un mensaje del diccionario viaja como su índice: con 16 entradas cuesta 4 pares y su rama pesa 1/256.</p>
+            <button type="submit">Anclar</button>
+          </form>
+        </details>
+        <h2>Faro (detector P12)</h2>
+        <p id="faro" class="ayuda">—</p>
+      </section>
       <section class="canal">
         <h2>Canal</h2>
         <dl>

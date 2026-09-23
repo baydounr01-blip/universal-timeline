@@ -39,6 +39,13 @@ async function sha256hex(texto) {
   return [...new Uint8Array(h)].map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
+// El ancla mas reciente que ya existia en `ms` (misma regla que el servidor).
+function receptorPara(ms) {
+  const anclas = estado.datos?.anclas ?? [];
+  return anclas.filter((a) => Date.parse(a.creadaEn) <= ms)
+    .sort((a, b) => Date.parse(b.creadaEn) - Date.parse(a.creadaEn))[0] ?? null;
+}
+
 // ------------------------------------------------------------------ destino
 function modo() {
   return document.querySelector('input[name="modo"]:checked').value;
@@ -72,8 +79,14 @@ function actualizarResumen() {
     if (Math.abs(delta) <= 1000) r = "Llega ahora.";
     else if (delta > 0) r = `Llegará sellado dentro de ${duracion(delta)} (${formatoFecha(d)}).`;
     else {
+      const receptor = receptorPara(Date.parse(d));
+      const n = receptor?.codigos.length ?? 0;
+      const enDiccionario = n && receptor.codigos.includes(texto.trim());
+      const b = enDiccionario ? Math.max(1, Math.ceil(Math.log2(n))) : bits;
       r = `Viaja ${duracion(-delta)} atrás, hasta ${formatoFecha(d)}. Abre una rama nueva`;
-      r += bits ? `: ${bits} pares entrelazados, peso de Born ${pesoBorn(-bits * Math.log10(4))}.` : ".";
+      r += b ? `: ${b} pares entrelazados, peso de Born ${pesoBorn(-b * Math.log10(4))}` : "";
+      r += enDiccionario ? " (código del diccionario)." : ".";
+      r += receptor ? ` Receptor: ${receptor.id}.` : " Sin receptor anclado: una red física no llegaría.";
     }
   }
   $("resumen").textContent = r;
@@ -109,6 +122,14 @@ function burbuja(m) {
   const meta = document.createElement("p");
   meta.className = "meta";
   const partes = [];
+  if (m.deteccion) {
+    li.classList.add("deteccion");
+    partes.push(`⚑ detección P12: citó el pulso #${m.deteccion.epoca} ${duracion(m.deteccion.antelacionMs)} antes de revelarse`);
+  }
+  if (m.direccion === "pasado") {
+    partes.push(m.receptor ? `receptor ${m.receptor}` : "sin receptor anclado");
+    if (m.codigo) partes.push(`código ${m.codigo.indice + 1}/${m.codigo.de}`);
+  }
   if (m.salida) partes.push(`↩ enviado al pasado → ${m.rama} (llega ${formatoFecha(m.destino)})`);
   else if (m.llegada) partes.push(`⟲ llegó desde ${formatoFecha(m.enviadoEn)} · ${m.paresEntrelazados} pares · Born ${pesoBorn(m.log10PesoBorn)}`);
   else if (m.direccion === "futuro") partes.push(`⇢ escrito ${formatoFecha(m.enviadoEn)}`);
@@ -154,6 +175,13 @@ function pintar() {
   if (abajo) lista.scrollTop = lista.scrollHeight;
 
   $("puente").hidden = !d.puenteCorreo;
+  $("anclas").replaceChildren(...(d.anclas.length ? d.anclas.map((a) => {
+    const li = document.createElement("li");
+    li.textContent = `${a.id} · ${a.autor} · desde ${formatoFecha(a.creadaEn)}` +
+      (a.codigos.length ? ` · diccionario de ${a.codigos.length}` : "");
+    return li;
+  }) : [Object.assign(document.createElement("li"), { textContent: "Sin anclas: nada puede llegar aquí desde el futuro." })]));
+  pintarFaro();
   $("titulo").textContent = `# ${d.sala}`;
   $("subtitulo").textContent = d.rama === "origen"
     ? "Línea de origen: tu historia"
@@ -179,6 +207,18 @@ function pintar() {
   tic(false);
 }
 
+function pintarFaro() {
+  const f = estado.datos?.faro;
+  if (!f) return;
+  const ultimo = f.pulsos[0];
+  const p = $("faro");
+  const codigo = document.createElement("span");
+  codigo.className = "faro-pulso";
+  codigo.textContent = `faro:${ultimo.epoca}:${ultimo.pulso}`;
+  p.replaceChildren(`Pulso vigente `, codigo, `. Próximo en ${duracion(Date.parse(f.proximo) - ahora())}. ` +
+    `Detecciones en esta sala: ${f.detecciones}. Quien cite un pulso antes de su hora trae información del futuro.`);
+}
+
 function tic(recargar = true) {
   $("reloj").textContent = formatoFecha(new Date(ahora()).toISOString());
   let abrir = false;
@@ -187,6 +227,8 @@ function tic(recargar = true) {
     span.textContent = falta > 0 ? `se abre en ${duracion(falta)}` : "abriendo…";
     if (falta <= 0) abrir = true;
   }
+  pintarFaro();
+  if (estado.datos?.faro && Date.parse(estado.datos.faro.proximo) <= ahora() && recargar) abrir = true;
   if (abrir && recargar) cargar();
 }
 
@@ -202,6 +244,7 @@ async function cargar() {
     // Solo se repinta si algo cambio: asi no se pierde lo que el usuario
     // esta mirando (una verificacion, la posicion del scroll).
     const huella = JSON.stringify([datos.sala, datos.rama, datos.puenteCorreo, datos.ramas,
+      datos.anclas.map((a) => a.id), datos.faro.epoca, datos.faro.detecciones,
       datos.mensajes.map((m) => [m.id, m.sellado, m.correo?.estado])]);
     estado.datos = datos;
     if (huella !== estado.huella) {
@@ -230,6 +273,19 @@ async function enviar(ev) {
   $("mensajes").scrollTop = $("mensajes").scrollHeight;
 }
 
+async function anclar(ev) {
+  ev.preventDefault();
+  if (!estado.sala) return;
+  const res = await fetch(API, {
+    method: "POST", headers: { "content-type": "application/json" },
+    body: JSON.stringify({ accion: "anclar", sala: estado.sala, autor: $("autor").value.trim(), codigos: $("codigos").value }),
+  });
+  const datos = await res.json();
+  if (!res.ok) { $("faro").textContent = datos.error; return; }
+  $("codigos").value = "";
+  await cargar();
+}
+
 function entrar(ev) {
   ev?.preventDefault();
   const sala = $("sala").value.trim().toLowerCase();
@@ -248,6 +304,7 @@ $("autor").value = leer("cronochat.autor");
 $("sala").value = decodeURIComponent(location.hash.slice(1)) || leer("cronochat.sala");
 $("entrar").addEventListener("submit", entrar);
 $("enviar").addEventListener("submit", enviar);
+$("anclar").addEventListener("submit", anclar);
 $("menu").addEventListener("click", () => document.body.classList.toggle("lateral-abierta"));
 $("texto").addEventListener("keydown", (e) => {
   if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); $("enviar").requestSubmit(); }
