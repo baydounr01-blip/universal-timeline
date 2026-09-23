@@ -161,17 +161,23 @@ compositor.
 
 #### Tabla: Qué escribir en cada casilla
 
-| # | Campo | Escribir en "Key" | Escribir en "Value" | Ejemplo exacto | Dónde obtenerlo |
+| # | Campo | Escribir en "Key" | Escribir en "Value" | Forma del valor | Dónde obtenerlo |
 |---|---|---|---|---|---|
-| **1** | Primera variable | `RESEND_API_KEY` | Tu clave de API de Resend (copia exacta, sin espacios) | `re_1a2b3c4d5e6f7g8h9i0j1k2l3m4n5o6p` | [resend.com](https://resend.com) → **API Keys** → **Create API Key** |
+| **1** | Primera variable | `RESEND_API_KEY` | Tu clave de API de Resend (copia exacta, sin espacios) | `re_` + los 32 caracteres que te da Resend | [resend.com](https://resend.com) → **API Keys** → **Create API Key** |
 | **2** | Segunda variable | `CRONOCHAT_REMITENTE` | Nombre + espacio + `<email@tu-dominio>` | `Cronochat <chat@tu-dominio.com>` | Tu dominio **verificado** en Resend. El email debe ser de tu dominio. |
 | **3** | Tercera variable | `CRONOCHAT_CORREOS_PERMITIDOS` | Direcciones o dominios separados por comas, **sin espacios** | `ana@ejemplo.com,luis@ejemplo.com,@familia.com` | Define tú mismo. Puedes listar emails específicos o dominios enteros (con `@` delante) |
-| **4** | Cuarta variable | `CRONOCHAT_CLAVE_ENTRANTE` | Secreto aleatorio largo de 32+ caracteres | `4f8c1d0a7b6e5932c4a1f8d7e0b3a695d2c81f74e6a09b53` (ejemplo, **no** lo reutilices) | Genera uno con: `openssl rand -hex 24` (en terminal) |
+| **4** | Cuarta variable | `CRONOCHAT_CLAVE_ENTRANTE` | Secreto aleatorio largo de 32+ caracteres | los 48 caracteres hexadecimales que imprima el comando de la derecha | Genera uno con: `openssl rand -hex 24` (en terminal) |
 
-> **Importante:** la columna «Ejemplo exacto» contiene solo ejemplos ilustrativos.
-> Los valores reales viven únicamente en las variables de entorno de Netlify y no
-> deben escribirse nunca en este repositorio: el escaneo de secretos de Netlify
-> detecta cualquier valor real presente en los archivos y detiene el despliegue.
+> **Importante:** la columna «Forma del valor» solo describe el formato que espera
+> cada variable. Los valores reales viven únicamente en las variables de entorno de
+> Netlify y no deben escribirse nunca en este repositorio: el escaneo de secretos de
+> Netlify detecta cualquier valor real presente en los archivos y detiene el despliegue.
+>
+> Por el mismo motivo, esta documentación no incluye claves de ejemplo que imiten el
+> formato real de un secreto (por ejemplo `re_` seguido de 32 caracteres, o una cadena
+> hexadecimal larga). La detección inteligente de Netlify las marca como secretos
+> aunque sean inventadas, y el despliegue falla igual. Describe el formato con
+> palabras en lugar de inventar una clave con pinta de auténtica.
 
 #### Procedimiento exacto en Netlify
 
