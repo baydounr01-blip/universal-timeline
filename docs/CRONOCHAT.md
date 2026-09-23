@@ -98,7 +98,8 @@ El repositorio ya trae `netlify.toml`, así que basta con conectarlo:
    `netlify/functions/` y ejecuta `npm test` como build. Si las pruebas fallan,
    no se despliega.
 3. El almacenamiento es **Netlify Blobs**, que se activa solo: no hay variables
-   de entorno ni base de datos que configurar.
+   de entorno ni base de datos que configurar, excepto las del puente de email
+   (ver sección 5).
 4. Al abrir la web, escribe tu nombre y una sala (por ejemplo `familia`).
    Comparte el enlace `https://tu-sitio.netlify.app/#familia` con quien quieras
    que entre.
@@ -154,14 +155,35 @@ vuelve a salir por email, así que no se forman bucles de correo.
 
 ### Configuración en Netlify
 
-En **Site configuration → Environment variables**:
+El puente de email necesita cuatro variables de entorno. Si no las configuras, el
+puente se desactiva y el campo «✉ Enviar también por email a…» no aparece en el
+compositor.
 
-| Variable | Para qué | Ejemplo |
-|---|---|---|
-| `RESEND_API_KEY` | Enviar (cuenta gratuita en resend.com, con tu dominio verificado) | `re_…` |
-| `CRONOCHAT_REMITENTE` | Remitente de los emails | `Cronochat <chat@tu-dominio>` |
-| `CRONOCHAT_CORREOS_PERMITIDOS` | Lista blanca: direcciones o `@dominios` | `rami@gmail.com, @familia.es` |
-| `CRONOCHAT_CLAVE_ENTRANTE` | Secreto largo que protege la entrada | `openssl rand -hex 24` |
+#### Tabla de variables
+
+| Variable | Dónde obtenerla | Formato exacto | Ejemplo | Notas |
+|---|---|---|---|---|
+| **RESEND_API_KEY** | [resend.com](https://resend.com) → API Keys → Create API Key | Token de 36+ caracteres sin espacios | `re_1a2b3c4d5e6f7g8h9i0j1k2l3m4n5o6p` | Copia exacta de Resend. Tu dominio debe estar verificado en Resend primero |
+| **CRONOCHAT_REMITENTE** | Tu dominio verificado en Resend | `Nombre <email@tu-dominio>` | `Cronochat <chat@familia.com>` | El email debe ser de tu dominio verificado. Formato: Nombre literal + espacio + <direccion@dominio> |
+| **CRONOCHAT_CORREOS_PERMITIDOS** | Define tú mismo (lista blanca) | Direcciones o dominios separados por comas | `ana@ejemplo.com,luis@ejemplo.com,@familia.com` | Sin espacios después de comas. Puedes poner dominios completos con @ delante. Sin esta lista el campo no aparece en la UI |
+| **CRONOCHAT_CLAVE_ENTRANTE** | Genera un secreto fuerte | String aleatorio de 32+ caracteres | `sk_test_9a8b7c6d5e4f3g2h1i0j9k8l7m6n5o4` | Úsalo en el webhook de tu proveedor de email entrante (Postmark, Mailgun, etc.) |
+
+#### Procedimiento en Netlify
+
+1. **Abre tu sitio en Netlify** → **Site settings** (esquina superior derecha) → **Environment variables**
+2. **Haz clic en "Add a variable"** para cada una (4 veces)
+3. **Rellena así:**
+   - Key: `RESEND_API_KEY`
+   - Value: (pega la clave de resend.com)
+   - Clic en "Save"
+4. **Repite el paso 3** con las 3 variables restantes
+5. **Redeploy:** Ve a **Deployments** → **Trigger deploy** → **Deploy site**
+
+Cuando Netlify redespliega, Netlify Functions carga estas variables automáticamente. El campo "✉ Enviar también por email a…" aparecerá en el compositor solo si:
+- `RESEND_API_KEY` y `CRONOCHAT_REMITENTE` están definidas
+- `CRONOCHAT_CORREOS_PERMITIDOS` contiene al menos una dirección/dominio
+
+#### Webhook para emails entrantes
 
 Para la entrada, configura en tu proveedor de correo entrante (Postmark
 Inbound, Resend Inbound, Mailgun Routes, CloudMailin…) un webhook JSON hacia:
