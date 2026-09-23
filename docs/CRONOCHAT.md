@@ -86,7 +86,8 @@ desfase, así que nadie puede abrir un mensaje sellado adelantando su reloj.
   guardado la otra mitad de los pares entrelazados, y la mejor memoria cuántica
   conocida aguanta seis horas.
 * **El transporte `fisico`** está declarado y responde `503 no disponible`. La
-  aplicación no finge una entrega que no puede hacer.
+  aplicación no finge una entrega que no puede hacer. Antes exige un receptor
+  anclado en el instante de destino (sección 6).
 
 ## 4. Desplegar en Netlify
 
@@ -226,21 +227,111 @@ los genéricos (`from`, `to`, `text`, `subject`).
 internet, se imprimen en la consola. La lista blanca es `@ejemplo.org` y la
 clave de entrada es `local`. Si defines `RESEND_API_KEY`, se envían de verdad.
 
-## 6. API
+## 6. El puente según la teoría
+
+Si se toma la teoría en serio, de su propio mecanismo (P-CTC, E7a) salen tres
+requisitos para que un mensaje llegue de verdad al pasado. Cronochat ya los
+cumple todos, así que el día que exista la capa física no habrá que cambiar
+nada más.
+
+### 6.1 Receptor anclado: nada llega antes de que exista el otro extremo
+
+En la teleportación postseleccionada, la mitad del par entrelazado tiene que
+estar **ya** en t0 cuando t1 escribe. Un canal no puede llegar a un instante
+en el que nadie guardaba su otro extremo. Es la misma regla que tienen las
+máquinas del tiempo de agujero de gusano: no llevan a antes de su
+construcción.
+
+Por eso cada sala puede tener **anclas**: receptores que se crean hoy y que,
+desde ese instante, pueden recibir del futuro.
+
+* Con el transporte `fisico`, un mensaje dirigido a un instante sin ancla se
+  rechaza con `409 no hay receptor anclado en ese instante`. Si hay ancla,
+  pasa al transporte (que hoy responde `503`).
+* Con el `simulado`, el mensaje abre su rama igual, pero queda marcado como
+  «sin receptor anclado».
+
+**Consecuencia práctica:** si la teoría es cierta, la fecha más antigua a la
+que tu yo del futuro podrá escribirte es la de tu primera ancla. Cuanto antes
+anclas, más pasado queda abierto.
+
+### 6.2 Diccionario: el peso de la rama sube en órdenes de magnitud
+
+La rama en la que el bucle cierra pesa 4⁻ᵇⁱᵗˢ. Un texto libre cuesta 8 bits
+por byte. Si el ancla fija de antemano un diccionario de N mensajes, cualquiera
+de ellos viaja como su índice y cuesta ⌈log₂ N⌉ bits.
+
+| Mensaje al pasado | Bits | Peso de Born de su rama |
+|---|---|---|
+| Texto libre de 40 caracteres | 320 | 10⁻¹⁹²·⁷ |
+| «todo bien» como texto libre | 72 | 10⁻⁴³·³ |
+| «todo bien» en un diccionario de 256 | 8 | 1,5·10⁻⁵ |
+| «todo bien» en un diccionario de 16 | 4 | 1/256 |
+| «sí» / «no» en un diccionario de 2 | 1 | 1/4 |
+
+Pasar de texto libre a un diccionario de 16 mejora el peso en unos
+**190 órdenes de magnitud**. Es la mejora más grande que admite el mecanismo:
+un bit es el mínimo, y 1/4 es el techo de una rama que cierra.
+
+### 6.3 Faro: el detector P12 funcionando en producción
+
+La teoría dice que su única firma observable es información o cómputo que la
+rama no pudo producir (P12). El faro lo convierte en un experimento que corre
+solo:
+
+* Cada hora el servidor revela un **pulso** de 64 bits:
+  `HMAC-SHA256(secreto, época)`. Nadie puede calcularlo antes, tampoco el
+  operador si no mira el secreto.
+* Si un mensaje cita `faro:<época>:<pulso>` **antes** de que ese pulso se
+  revele, queda marcado como **detección**. El pulso se oculta hasta su hora
+  para que nadie pueda copiarlo y fingir una segunda detección.
+* Sin canal (y sin fuga del secreto), la probabilidad de acertar por azar es
+  2⁻⁶⁴ ≈ 5·10⁻²⁰ por intento. Una detección es, por tanto, o una fuga o el
+  canal.
+
+**Cómo se usa:** quien reciba un mensaje del futuro que diga «el pulso de las
+18:00 será `…`» podrá comprobarlo a las 18:00. Si coincide, tiene una prueba
+de que el mensaje venía de después.
+
+**Lo que la propia teoría advierte (E7d):** el peso de la rama que cierra un
+pulso de 64 bits es 4⁻⁶⁴, menor que el de acertarlo por azar (2⁻⁶⁴). En el
+conjunto de todas las ramas, el canal no se distingue del azar. Dentro de la
+rama en la que el bucle cierra, en cambio, la fidelidad es 1: si vives en
+ella, el faro se dispara con certeza. El detector no puede hacer más que eso,
+y es exactamente lo que la teoría predice.
+
+**Secreto:** se toma de `CRONOCHAT_SECRETO_FARO`. Si no está definido, se
+genera uno aleatorio de 256 bits la primera vez y se guarda en Netlify Blobs.
+
+### 6.4 Lo que sigue sin depender del software
+
+Sin la capa física, nada llega al pasado: la no señalización (E7b) lo
+garantiza, y ningún código puede saltársela. Lo que el software ya hace es
+dejarlo todo preparado:
+
+* el receptor espera desde hoy,
+* los mensajes cuestan lo mínimo que permite el mecanismo, y
+* hay un detector en marcha que registraría la primera prueba.
+
+## 7. API
 
 ```
 GET  /api/cronochat?sala=familia[&rama=origen|rama-xxxxxxxx]
 POST /api/cronochat   {"sala":"familia","autor":"Rami","texto":"hola","destino":"1995-06-01T10:00:00Z",
                        "correos":["ana@familia.es"]}
+POST /api/cronochat   {"accion":"anclar","sala":"familia","autor":"Rami","codigos":["sí","no"]}
 POST /api/correo-entrante?clave=…   (webhook del proveedor de correo entrante)
 ```
 
 `destino` es opcional (se toma «ahora»); va del año 1 al 9999 con precisión de
 milisegundos. La respuesta de `GET` incluye `ahora`, la hora del servidor, la
-línea temporal pedida y la lista de ramas de la sala.
+línea temporal pedida, la lista de ramas de la sala, sus `anclas` y el estado
+del `faro` (los últimos 6 pulsos revelados, la hora del próximo y cuántas
+detecciones tiene la sala). Los mensajes al pasado llevan `receptor` (el ancla
+o `null`) y, si son del diccionario, `codigo`.
 
-Límites: 2 000 caracteres por mensaje, 40 caracteres por nombre y 500 mensajes
-por sala.
+Límites: 2 000 caracteres por mensaje, 40 caracteres por nombre, 500 mensajes
+por sala, 20 anclas por sala y 256 entradas de 200 caracteres por diccionario.
 
 ## Referencias
 

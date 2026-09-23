@@ -16,6 +16,7 @@
 //   familia+1995-06-01@tu-dominio        -> al pasado: abre una rama
 
 import { ORIGEN } from "./cronologia.mjs";
+import { revelaEn } from "./puente.mjs";
 
 export const MAX_INTENTOS = 5;
 
@@ -33,6 +34,8 @@ export function configuracionCorreo(env) {
 // hora en la linea de origen.
 export function debeSalir(m, ahoraMs) {
   if (!m.correo || m.correo.estado !== "pendiente" || m.correo.intentos >= MAX_INTENTOS) return false;
+  // Un pulso detectado no sale por email antes de revelarse.
+  if (m.deteccion && revelaEn(m.deteccion.epoca) > ahoraMs) return false;
   if (m.direccion === "futuro") return Date.parse(m.destino) <= ahoraMs;
   return true;
 }

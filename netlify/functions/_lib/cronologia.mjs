@@ -23,6 +23,11 @@
 // El transporte hacia el pasado es una interfaz (`TRANSPORTES`). El unico
 // que existe hoy es el simulado: registra la rama y su medida exacta. Si
 // algun dia hay un canal fisico, se anade aqui sin tocar nada mas.
+//
+// Lo que la teoria exige al puente (receptor anclado, diccionario y
+// detector P12) esta en ./puente.mjs.
+
+import { codificar, detectar, receptorPara, revelaEn } from "./puente.mjs";
 
 export const VENTANA_PRESENTE_MS = 1_000;
 export const MAX_TEXTO = 2_000;
@@ -154,8 +159,14 @@ export async function crearMensaje(entrada, ahoraMs, transporte = "simulado", op
     nonce,
     rama: ORIGEN,
   };
+  const deteccion = await detectar(texto, opciones.secretoFaro, ahoraMs);
+  if (deteccion) mensaje.deteccion = deteccion;
   if (dir === "pasado") {
     const t = TRANSPORTES[transporte];
+    const receptor = receptorPara(opciones.anclas ?? [], destinoMs);
+    if (transporte === "fisico" && !receptor) {
+      throw new ErrorCronochat("no hay receptor anclado en ese instante: el canal no llega a antes de que exista su otro extremo", 409);
+    }
     if (!t?.disponible) {
       throw new ErrorCronochat(`transporte hacia el pasado no disponible: ${t?.nombre ?? transporte}`, 503);
     }
@@ -163,8 +174,12 @@ export async function crearMensaje(entrada, ahoraMs, transporte = "simulado", op
     // y a partir de ahi contiene este mensaje. El origen no cambia.
     mensaje.rama = `rama-${id.slice(0, 8)}`;
     mensaje.transporte = t.nombre;
-    mensaje.paresEntrelazados = bits;
-    mensaje.log10PesoBorn = log10PesoBorn(bits);
+    mensaje.receptor = receptor?.id ?? null;
+    const cod = codificar(texto, receptor);
+    if (cod) mensaje.codigo = { indice: cod.codigo, de: cod.de };
+    const bitsCanal = cod ? cod.bits : bits;
+    mensaje.paresEntrelazados = bitsCanal;
+    mensaje.log10PesoBorn = log10PesoBorn(bitsCanal);
   }
   if (correos.length) {
     // Al futuro sale a su hora; al presente y al pasado, ya (el buzon vive
@@ -181,6 +196,14 @@ export function vistaDe(mensaje, ahoraMs) {
   // y en que estado esta el envio.
   const { nonce, correo, ...publico } = mensaje;
   if (correo) publico.correo = { destinatarios: correo.para.length, estado: correo.estado };
+  // Un pulso detectado no se muestra antes de su hora: si se viera, otro
+  // podria copiarlo y fingir una segunda deteccion.
+  const d = mensaje.deteccion;
+  if (d && revelaEn(d.epoca) > ahoraMs) {
+    const oculto = `[pulso oculto hasta ${new Date(revelaEn(d.epoca)).toISOString()}]`;
+    publico.texto = publico.texto.replace(new RegExp(d.pulso, "gi"), oculto);
+    publico.deteccion = { epoca: d.epoca, antelacionMs: d.antelacionMs };
+  }
   if (mensaje.direccion === "futuro" && Date.parse(mensaje.destino) > ahoraMs) {
     const { texto, ...sellado } = publico;
     return { ...sellado, sellado: true, faltaMs: Date.parse(mensaje.destino) - ahoraMs };

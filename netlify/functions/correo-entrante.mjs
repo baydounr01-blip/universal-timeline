@@ -5,9 +5,9 @@
 
 import { timingSafeEqual } from "node:crypto";
 
-import { ErrorCronochat, crearMensaje, permitidosDe, vistaDe } from "./_lib/cronologia.mjs";
+import { ErrorCronochat, crearMensaje, permitidosDe, validarSala, vistaDe } from "./_lib/cronologia.mjs";
 import { configuracionCorreo, entradaDeCorreo } from "./_lib/correo.mjs";
-import { almacen, publicar } from "./cronochat.mjs";
+import { almacen, contextoPuente, publicar } from "./cronochat.mjs";
 
 const json = (cuerpo, status = 200) => new Response(JSON.stringify(cuerpo),
   { status, headers: { "content-type": "application/json; charset=utf-8" } });
@@ -32,7 +32,9 @@ export async function recibir(req, store, env = process.env, ahoraMs = Date.now(
     const entrada = entradaDeCorreo(cuerpo);
     if (entrada.error) throw new ErrorCronochat(entrada.error);
     // Lo que entra por email no reenvia por email: sin bucles de correo.
-    const mensaje = await crearMensaje(entrada, ahoraMs, "simulado", { permitidos: permitidosDe(config.permitidos) });
+    const puente = await contextoPuente(store, validarSala(entrada.sala), env);
+    const mensaje = await crearMensaje(entrada, ahoraMs, "simulado",
+      { permitidos: permitidosDe(config.permitidos), ...puente });
     const final = await publicar(store, mensaje, config, ahoraMs, fetchFn);
     return json({ mensaje: vistaDe(final, ahoraMs) }, 201);
   } catch (err) {

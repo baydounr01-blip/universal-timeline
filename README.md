@@ -57,6 +57,11 @@ un instante de destino:
   con su coste en pares entrelazados y su peso de Born. El transporte es el
   P-CTC simulado, y la capa física queda preparada para cuando exista.
 
+* **El puente según la teoría:** receptores anclados (nada llega a antes de
+  que exista su otro extremo), diccionarios que abaratan un mensaje al pasado
+  en unos 190 órdenes de magnitud y un detector P12 en producción (el faro)
+  que registraría la primera prueba de información del futuro.
+
 * **Puente de email:** cualquier mensaje puede salir también por correo a su
   hora, y se puede escribir a la sala desde el email
   (`familia+2030@tu-dominio` sella el mensaje hasta 2030).

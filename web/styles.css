@@ -74,6 +74,14 @@ button { cursor: pointer; border: 0; border-radius: 8px; padding: 8px 12px; back
 }
 .ramas button[aria-current="true"] { border-color: var(--acento); background: var(--cabecera); }
 
+.anclas { list-style: none; margin: 6px 0; padding: 0; display: grid; gap: 4px; font-size: 13px; }
+.anclas li { border-left: 3px solid var(--acento); padding-left: 8px; overflow-wrap: anywhere; }
+.puente-panel details { margin: 6px 0 14px; font-size: 13px; }
+.puente-panel summary { cursor: pointer; color: var(--acento); }
+.anclar { display: grid; gap: 8px; margin-top: 8px; }
+.anclar label { display: grid; gap: 4px; color: var(--suave); }
+.faro-pulso { font-family: ui-monospace, monospace; }
+.burbuja.deteccion { outline: 2px solid var(--acento); }
 .canal dl { margin: 0; display: grid; gap: 4px; font-size: 13px; }
 .canal dt { font-weight: 600; }
 .canal dd { margin: 0 0 6px; color: var(--suave); }

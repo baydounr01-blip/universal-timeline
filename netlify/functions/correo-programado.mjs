@@ -8,6 +8,7 @@ export async function repartir(store, config, ahoraMs = Date.now(), fetchFn = fe
   const { blobs } = await store.list();
   const resumen = { revisados: 0, enviados: 0, fallidos: 0 };
   for (const { key } of blobs) {
+    if (key.startsWith("_")) continue;   // anclas y secreto del faro, no mensajes
     const m = await store.get(key, { type: "json" });
     if (!m) continue;
     resumen.revisados += 1;
