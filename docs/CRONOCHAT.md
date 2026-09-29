@@ -70,6 +70,15 @@ historia hermana en la que llegó.
 El reloj que decide es siempre el del servidor. El navegador solo corrige su
 desfase, así que nadie puede abrir un mensaje sellado adelantando su reloj.
 
+**Lo que el sello no cubre, dicho claro** (auditoría de 2026‑09‑29, U4): el
+texto de un mensaje al futuro se guarda **en claro** en el almacén del sitio;
+el sello lo aplica el servidor al servir la sala. Quien administre el sitio o
+su almacén lo lee antes de hora. Lo que sí queda probado ante cualquiera es
+la integridad: el compromiso SHA‑256 lleva un nonce de 72 bits que solo se
+publica al abrirse. Un sello que no dependa del servidor es la cápsula RSW del
+repositorio (`python -m bbu capsula`), y cifrar con ella los mensajes en
+reposo es la siguiente entrega.
+
 ## 3. Qué funciona hoy y qué espera a la capa física
 
 * **Hacia el futuro, funciona de verdad.** Un mensaje programado para dentro de
@@ -222,8 +231,12 @@ Para la entrada, configura en tu proveedor de correo entrante (Postmark
 Inbound, Resend Inbound, Mailgun Routes, CloudMailin…) un webhook JSON hacia:
 
 ```
-https://tu-sitio.netlify.app/api/correo-entrante?clave=<CRONOCHAT_CLAVE_ENTRANTE>
+https://tu-sitio.netlify.app/api/correo-entrante
 ```
+
+con la cabecera `Authorization: Bearer <CRONOCHAT_CLAVE_ENTRANTE>` (la clave no
+queda así en ningún registro). Si el proveedor no permite cabeceras, la clave
+también vale en la URL: `…/api/correo-entrante?clave=<CRONOCHAT_CLAVE_ENTRANTE>`.
 
 El normalizador acepta los campos de Postmark (`FromFull`, `To`, `TextBody`,
 `StrippedTextReply`), los de Mailgun (`sender`, `recipient`, `stripped-text`) y

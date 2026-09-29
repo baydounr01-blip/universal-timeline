@@ -1,7 +1,9 @@
 // Entrada del puente de email: el proveedor de correo entrante reenvia aqui
 // cada email como JSON. La direccion de destino decide sala e instante
-// (ver _lib/correo.mjs). Protegido con CRONOCHAT_CLAVE_ENTRANTE, que va en
-// la URL del webhook: /api/correo-entrante?clave=...
+// (ver _lib/correo.mjs). Protegido con CRONOCHAT_CLAVE_ENTRANTE, que el
+// proveedor manda en la cabecera `Authorization: Bearer <clave>` (lo
+// recomendado: no queda en los registros de nadie) o, si el proveedor no
+// admite cabeceras, en la URL del webhook: /api/correo-entrante?clave=...
 
 import { timingSafeEqual } from "node:crypto";
 
@@ -19,11 +21,19 @@ function claveValida(dada, esperada) {
   return a.length === b.length && timingSafeEqual(a, b);
 }
 
+// La clave, de la cabecera si viene; si no, de la URL (auditoria 2026-09-29, U3).
+function claveDe(req) {
+  const auth = req.headers.get("authorization") ?? "";
+  const portador = /^Bearer\s+(\S+)$/i.exec(auth.trim());
+  if (portador) return portador[1];
+  return new URL(req.url).searchParams.get("clave");
+}
+
 export async function recibir(req, store, env = process.env, ahoraMs = Date.now(), fetchFn = fetch) {
   const config = configuracionCorreo(env);
   if (!config.claveEntrante) return json({ error: "puente de entrada sin configurar" }, 503);
   if (req.method !== "POST") return json({ error: "metodo no permitido" }, 405);
-  if (!claveValida(new URL(req.url).searchParams.get("clave"), config.claveEntrante)) {
+  if (!claveValida(claveDe(req), config.claveEntrante)) {
     return json({ error: "clave no valida" }, 401);
   }
   try {

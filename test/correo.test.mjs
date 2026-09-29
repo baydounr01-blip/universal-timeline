@@ -148,9 +148,14 @@ test("entrada: sin clave o con clave mala no entra nada; con clave abre rama o s
   const store = almacen();
   const req = (clave, cuerpo) => new Request(`https://x/api/correo-entrante?clave=${clave}`,
     { method: "POST", body: JSON.stringify(cuerpo) });
+  const conCabecera = (clave, cuerpo) => new Request("https://x/api/correo-entrante",
+    { method: "POST", headers: { authorization: `Bearer ${clave}` }, body: JSON.stringify(cuerpo) });
   const email = { From: "Ana <ana@x.es>", To: "fam+1995-06-01@crono.org", TextBody: "hola 1995" };
   assert.equal((await recibir(req("x", email), store, { ...ENV, CRONOCHAT_CLAVE_ENTRANTE: "" }, T0)).status, 503);
   assert.equal((await recibir(req("mala", email), store, ENV, T0)).status, 401);
+  assert.equal((await recibir(conCabecera("mala", email), store, ENV, T0)).status, 401);
+  // La cabecera vale igual que la URL, y es la recomendada: no queda en registros.
+  assert.equal((await recibir(conCabecera("secreto-largo", { ...email, To: "fam2@crono.org" }), store, ENV, T0)).status, 201);
   const ok = await recibir(req("secreto-largo", email), store, ENV, T0);
   assert.equal(ok.status, 201);
   const m = (await ok.json()).mensaje;
